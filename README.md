@@ -182,10 +182,8 @@ auto asks = book.orders(mini_exchange::Side::Sell); // остаток #1: 2 ед
 
 ## Doxygen и GitHub Pages
 
-**Планируемый адрес:** [документация Mini Exchange](https://Vova-MZUCMC.github.io/mini-exchange/).
-Это адрес для репозитория `Vova-MZUCMC/mini-exchange`; публикация пока **не подтверждена**.
-Если выбран другой владелец или имя репозитория, замените ссылку на
-`https://OWNER.github.io/REPOSITORY/` (точный адрес также выдаст deploy job).
+**Планируемый адрес:** [документация Mini Exchange](https://temporary1953.github.io/MiniExchange/?utm_source=chatgpt.com).
+Это адрес для репозитория `TEMPORARY1953/MiniExchange`;
 
 Локальная генерация, включая проверку предупреждений Doxygen:
 
