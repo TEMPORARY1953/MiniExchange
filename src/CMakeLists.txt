@@ -1,0 +1,5 @@
+add_library(mini_exchange order_book.cpp)
+add_library(MiniExchange::mini_exchange ALIAS mini_exchange)
+target_include_directories(mini_exchange PUBLIC "${PROJECT_SOURCE_DIR}/include")
+target_compile_features(mini_exchange PUBLIC cxx_std_17)
+mini_exchange_warnings(mini_exchange)

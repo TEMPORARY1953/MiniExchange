@@ -1,0 +1,96 @@
+name: Build, test, benchmark and documentation
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022]
+    steps:
+      - uses: actions/checkout@v6
+      - name: Configure C++17 Release build
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      - name: Build library, demo, tests and benchmarks
+        run: cmake --build build --config Release --parallel 2
+      - name: Run unit tests
+        run: ctest --test-dir build -C Release --output-on-failure --no-tests=error --output-junit tests.xml
+      - name: Run console demonstration
+        run: cmake --build build --config Release --target run_demo
+      - name: Measure order processing (results are printed in this log)
+        run: cmake --build build --config Release --target run_benchmarks
+      - name: Save test and benchmark reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tests-${{ matrix.os }}
+          path: |
+            build/tests.xml
+            build/benchmark.json
+          if-no-files-found: warn
+
+  documentation:
+    name: Build Doxygen documentation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install Doxygen
+        run: sudo apt-get update && sudo apt-get install --yes doxygen
+      - name: Configure documentation only
+        run: >-
+          cmake -S . -B build
+          -DBUILD_TESTING=OFF
+          -DMINI_EXCHANGE_BUILD_BENCHMARKS=OFF
+          -DMINI_EXCHANGE_BUILD_DOCS=ON
+      - name: Generate HTML (documentation warnings fail the build)
+        run: cmake --build build --target docs
+      - name: Check generated entry point
+        run: test -s build/docs/html/index.html
+      - name: Upload HTML for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: doxygen-html
+          path: build/docs/html
+          if-no-files-found: error
+      - name: Prepare GitHub Pages artifact
+        if: >-
+          github.event_name != 'pull_request' &&
+          github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: build/docs/html
+
+  deploy:
+    name: Publish GitHub Pages
+    if: >-
+      github.event_name != 'pull_request' &&
+      github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    needs: [verify, documentation]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+      - name: Deploy documentation
+        id: deployment
+        uses: actions/deploy-pages@v4
